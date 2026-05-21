@@ -1,38 +1,45 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OWMTuranVN</title>
   </head>
   <body>
-    <h1>다낭시</h1>
-    <h2>현재 날씨 : <span id="c"></span></h2>
-    <h3>날씨 설명 : <span id="c"></span></h3>
+    <h1>날씨</h1>
+    <h2>현재 날씨 : <span id="cWeather"></span></h2>
+    <h3>날씨 설명 : <span id="desc"></span></h3>
     <h3>온도 : <span id="cTemp"></span></h3>
-    <h3>습도 : <span id="c"></span></h3>
-    <h3>풍속 : <span id="c"></span></h3>
-
+    <h3>습도 : <span id="cHum"></span></h3>
+    <h3>풍속 : <span id="cWind"></span></h3>
     <img id="icon" src="#" alt="" />
+
     <script>
+      const currentWeather = document.querySelector("#cWeather");
+      const description = document.querySelector("#desc");
       const currentTemp = document.querySelector("#cTemp");
       const currentHum = document.querySelector("#cHum");
       const currentWind = document.querySelector("#cWind");
-      const icon = document.querySelector("#icon");
+      const iconnum = document.querySelector("#icon");
 
       fetch(
         "https://api.openweathermap.org/data/2.5/weather?appid=168b6754dcf47f6e62a9e2e3a63f2065&id=1583992&units=metric",
       )
         .then(res => res.json())
         .then(result => {
+          // 결과 확인용
           console.log(result);
-          console.log(result.main.temp);
-          console.log(result.weather[0].icon);
 
+          // 외부 사이트에서 아이콘 불러오기 위한 URL 생성
           let imgURL = `https://openweathermap.org/payload/api/media/file/${result.weather[0].icon}.png`;
-          ctemp.innerText = result.main.temp;
-          chum.innerText = result.main.humidity;
-          icon.setAttribute("src", imgURL);
+
+          // API에서 받아온 데이터를 HTML 요소에 삽입
+          currentWeather.innerText = result.weather[0].main;
+          description.innerText = result.weather[0].description;
+          currentTemp.innerText = result.main.temp;
+          currentHum.innerText = result.main.humidity;
+          currentWind.innerText = result.wind.speed;
+          iconnum.setAttribute("src", imgURL);
         });
     </script>
   </body>
