@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,7 +16,7 @@
       const icon = document.querySelector("#icon");
 
       fetch(
-        "http://api.openweathermap.org/data/2.5/weather?appid=168b6754dcf47f6e62a9e2e3a63f2065&id=1835848&units=metric",
+        "https://api.openweathermap.org/data/2.5/weather?appid=168b6754dcf47f6e62a9e2e3a63f2065&id=1835848&units=metric",
       )
         .then(res => res.json())
         .then(result => {
