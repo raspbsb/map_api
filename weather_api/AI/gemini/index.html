@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>기상청 단기예보 조회 서비스</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #f8f9fa;
+        padding-top: 30px;
+      }
+      .card {
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .table-responsive {
+        background: white;
+        border-radius: 8px;
+      }
+      .pagination {
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-md-10">
+          <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+              <h5 class="card-title mb-0">날짜 및 지역별 예보 조회</h5>
+            </div>
+            <div class="card-body">
+              <form id="searchForm" class="row g-3">
+                <div class="col-md-4">
+                  <label for="baseDate" class="form-label">조회 날짜</label>
+                  <input type="date" class="form-control" id="baseDate" required />
+                </div>
+                <div class="col-md-4">
+                  <label for="regionSelect" class="form-label">지역 선택 (시/도)</label>
+                  <select class="form-select" id="regionSelect" required>
+                    <option value="">-- 선택하세요 --</option>
+                  </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                  <button type="submit" class="btn btn-primary w-100">날씨 조회하기</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card d-none" id="resultCard">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0" id="resultTitle">예보 결과</h5>
+                <span class="badge bg-secondary" id="coordInfo"></span>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                  <thead class="table-dark">
+                    <tr>
+                      <th scope="col">예보 날짜</th>
+                      <th scope="col">예보 시간</th>
+                      <th scope="col">온도 (°C)</th>
+                      <th scope="col">습도 (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="forecastTableBody"></tbody>
+                </table>
+              </div>
+
+              <nav class="mt-4">
+                <ul class="pagination" id="pagination"></ul>
+              </nav>
+            </div>
+          </div>
+
+          <div class="alert alert-danger d-none" id="errorAlert" role="alert"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // 1. 첨부 파일 데이터 기반 지역별 격자 좌표(nx, ny) 데이터 매핑 매트릭스
+      const regionData = [
+        { name: "서울특별시", nx: 60, ny: 127 },
+        { name: "부산광역시", nx: 98, ny: 76 },
+        { name: "대구광역시", nx: 89, ny: 90 },
+        { name: "인천광역시", nx: 55, ny: 124 },
+        { name: "광주광역시", nx: 58, ny: 74 },
+        { name: "대전광역시", nx: 67, ny: 100 },
+        { name: "울산광역시", nx: 102, ny: 84 },
+        { name: "세종특별자치시", nx: 66, ny: 103 },
+        { name: "경기도", nx: 60, ny: 120 },
+        { name: "강원특별자치도", nx: 73, ny: 134 },
+        { name: "충청북도", nx: 69, ny: 107 },
+        { name: "충청남도", nx: 68, ny: 100 },
+        { name: "전북특별자치도", nx: 63, ny: 89 },
+        { name: "전라남도", nx: 51, ny: 67 },
+        { name: "경상북도", nx: 89, ny: 91 },
+        { name: "경상남도", nx: 91, ny: 77 },
+        { name: "제주특별자치도", nx: 52, ny: 38 },
+      ];
+
+      // 공공데이터 API 호출 설정
+      const API_URL = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
+      const SERVICE_KEY =
+        "jNu%2FUDr0Q2KYQ9rDGnLJqo4ahkjIQrHpn9wOnGbNXkmLqSFCj5rE6fYoLKFF1ELf5Yr4JDkQeCisuwGmsVfbOw%3D%3D";
+
+      // 글로벌 상태 변수
+      let processedForecastData = []; // 시간별로 통합한 온도/습도 데이터 순서쌍
+      let currentPage = 1;
+      const rowsPerPage = 10;
+
+      // DOM 요소 초기화
+      document.addEventListener("DOMContentLoaded", () => {
+        const regionSelect = document.getElementById("regionSelect");
+        const baseDateInput = document.getElementById("baseDate");
+
+        // 오늘 날짜를 기본값으로 세팅 (Format: YYYY-MM-DD)
+        const today = new Date().toISOString().split("T")[0];
+        baseDateInput.value = today;
+
+        // 셀렉트 박스에 지역 바인딩
+        regionData.forEach((region, index) => {
+          const option = document.createElement("option");
+          option.value = index;
+          option.textContent = region.name;
+          regionSelect.appendChild(option);
+        });
+      });
+
+      // 폼 제출 이벤트 리스너
+      document.getElementById("searchForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        hideElements();
+
+        const dateValue = document.getElementById("baseDate").value.replace(/-/g, ""); // YYYYMMDD
+        const regionIndex = document.getElementById("regionSelect").value;
+        const selectedRegion = regionData[regionIndex];
+
+        // 단기예보는 0500 기준 조회 가이드 적용
+        const baseTime = "0500";
+
+        // API 호출 URL 조립
+        const requestUrl = `${API_URL}?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=1000&dataType=JSON&base_date=${dateValue}&base_time=${baseTime}&nx=${selectedRegion.nx}&ny=${selectedRegion.ny}`;
+
+        try {
+          const response = await fetch(requestUrl);
+          if (!response.ok) throw new Error("네트워크 응답 시스템에 이상이 있습니다.");
+
+          const data = await response.json();
+
+          if (data.response && data.response.header.resultCode === "00") {
+            const items = data.response.body.items.item;
+            parseForecastData(items);
+
+            if (processedForecastData.length > 0) {
+              currentPage = 1;
+              document.getElementById("coordInfo").textContent =
+                `${selectedRegion.name} (격자 X: ${selectedRegion.nx}, Y: ${selectedRegion.ny})`;
+              document.getElementById("resultCard").classList.remove("d-none");
+              renderTable();
+            } else {
+              showError(
+                "해당 날짜에 일치하는 온도(TMP) 및 습도(REH) 예보 데이터가 존재하지 않습니다.",
+              );
+            }
+          } else {
+            const errMsg = data.response ? data.response.header.resultMsg : "데이터 조회 실패";
+            showError(`API 에러 발생: ${errMsg}`);
+          }
+        } catch (error) {
+          showError(
+            `데이터를 가져오는 중 오류가 발생했습니다: ${error.message}<br><small class='text-muted'>웹 브라우저의 CORS 제한 정책으로 인한 차단일 수 있으니 로컬 서버 환경 또는 CORS 해제 브라우저 환경에서 확인 바랍니다.</small>`,
+          );
+        }
+      });
+
+      // 2. 단기예보 로우 데이터를 시간별(날짜+시간 키)로 정렬하여 온도(TMP) 및 습도(REH) 구조화
+      function parseForecastData(items) {
+        const timeMap = {};
+
+        items.forEach(item => {
+          // 카테고리가 기온(TMP) 또는 습도(REH)인 경우만 정제
+          if (item.category === "TMP" || item.category === "REH") {
+            const key = `${item.fcstDate}_${item.fcstTime}`;
+            if (!timeMap[key]) {
+              timeMap[key] = {
+                date: item.fcstDate,
+                time: item.fcstTime,
+                tmp: "-",
+                reh: "-",
+              };
+            }
+            if (item.category === "TMP") timeMap[key].tmp = item.fcstValue;
+            if (item.category === "REH") timeMap[key].reh = item.fcstValue;
+          }
+        });
+
+        // 맵 구조를 배열로 변환 및 시간 연대순 정렬
+        processedForecastData = Object.values(timeMap).sort((a, b) => {
+          return a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date);
+        });
+      }
+
+      // 3. 날짜 서식 변경 처리 (YYYYMMDD -> yyyy.mm.dd)
+      function formatDateString(dateStr) {
+        if (dateStr.length !== 8) return dateStr;
+        return `${dateStr.substring(0, 4)}.${dateStr.substring(4, 6)}.${dateStr.substring(6, 8)}`;
+      }
+
+      // 4. 시간 서식 변경 처리 (HHMM -> HH:MM)
+      function formatTimeString(timeStr) {
+        if (timeStr.length !== 4) return timeStr;
+        return `${timeStr.substring(0, 2)}:${timeStr.substring(2, 4)}`;
+      }
+
+      // 5. 테이블 렌더링 및 페이징 분할 알고리즘
+      function renderTable() {
+        const tbody = document.getElementById("forecastTableBody");
+        tbody.innerHTML = "";
+
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const pageItems = processedForecastData.slice(startIndex, endIndex);
+
+        pageItems.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+                <td>${formatDateString(item.date)}</td>
+                <td>${formatTimeString(item.time)}</td>
+                <td><strong class="text-danger">${item.tmp}</strong> °C</td>
+                <td><strong class="text-primary">${item.reh}</strong> %</td>
+            `;
+          tbody.appendChild(tr);
+        });
+
+        renderPagination();
+      }
+
+      // 6. 하단 페이지네이션 인터페이스 동적 구현
+      function renderPagination() {
+        const paginationContainer = document.getElementById("pagination");
+        paginationContainer.innerHTML = "";
+
+        const totalPages = Math.ceil(processedForecastData.length / rowsPerPage);
+        if (totalPages <= 1) return;
+
+        // 이전 페이지 버튼
+        const prevLi = document.createElement("li");
+        prevLi.className = `page-item ${currentPage === 1 ? "disabled" : ""}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage - 1})">이전</a>`;
+        paginationContainer.appendChild(prevLi);
+
+        // 페이지 번호 리스트 구현
+        for (let i = 1; i <= totalPages; i++) {
+          const li = document.createElement("li");
+          li.className = `page-item ${currentPage === i ? "active" : ""}`;
+          li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i})">${i}</a>`;
+          paginationContainer.appendChild(li);
+        }
+
+        // 다음 페이지 버튼
+        const nextLi = document.createElement("li");
+        nextLi.className = `page-item ${currentPage === totalPages ? "disabled" : ""}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage + 1})">다음</a>`;
+        paginationContainer.appendChild(nextLi);
+      }
+
+      // 페이지 변경 처리 제어자
+      window.changePage = function (pageNumber) {
+        const totalPages = Math.ceil(processedForecastData.length / rowsPerPage);
+        if (pageNumber < 1 || pageNumber > totalPages) return;
+        currentPage = pageNumber;
+        renderTable();
+      };
+
+      function showError(message) {
+        const errorAlert = document.getElementById("errorAlert");
+        errorAlert.innerHTML = message;
+        errorAlert.classList.remove("d-none");
+      }
+
+      function hideElements() {
+        document.getElementById("resultCard").classList.add("d-none");
+        document.getElementById("errorAlert").classList.add("d-none");
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>기상청 단기예보 조회</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --sky-top: #1a6fd4;
+        --sky-mid: #3b9ae1;
+        --card-bg: rgba(255, 255, 255, 0.95);
+      }
+      body {
+        background: linear-gradient(160deg, var(--sky-top) 0%, var(--sky-mid) 50%, #e8f4fd 100%);
+        min-height: 100vh;
+        font-family: "Segoe UI", "Noto Sans KR", sans-serif;
+      }
+      .hero-header {
+        background: rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 16px 0;
+      }
+      .hero-header h1 {
+        color: #fff;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.3px;
+      }
+      .hero-header p {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.82rem;
+        margin: 0;
+      }
+      .control-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(26, 111, 212, 0.15);
+        padding: 24px;
+      }
+      .form-label {
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: #374151;
+        margin-bottom: 6px;
+      }
+      .form-select,
+      .form-control {
+        border-radius: 10px;
+        border: 1.5px solid #d1d5db;
+        font-size: 0.92rem;
+        transition: border-color 0.2s;
+      }
+      .form-select:focus,
+      .form-control:focus {
+        border-color: var(--sky-top);
+        box-shadow: 0 0 0 3px rgba(26, 111, 212, 0.12);
+      }
+      .btn-search {
+        background: linear-gradient(135deg, #1a6fd4, #3b9ae1);
+        border: none;
+        border-radius: 10px;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 10px 28px;
+        transition:
+          opacity 0.2s,
+          transform 0.1s;
+      }
+      .btn-search:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+        color: #fff;
+      }
+      .btn-search:active {
+        transform: translateY(0);
+      }
+      .result-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(26, 111, 212, 0.12);
+        overflow: hidden;
+      }
+      .result-title {
+        background: linear-gradient(135deg, #1a6fd4, #3b9ae1);
+        color: #fff;
+        padding: 16px 24px;
+        font-weight: 700;
+        font-size: 1rem;
+      }
+      .table-container {
+        padding: 0;
+      }
+      .table {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+      .table thead th {
+        background: #f8fafc;
+        color: #374151;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 12px 16px;
+        border-bottom: 2px solid #e5e7eb;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .table tbody td {
+        padding: 13px 16px;
+        vertical-align: middle;
+        text-align: center;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      .table tbody tr:hover {
+        background: #f0f7ff;
+      }
+      .badge-time {
+        background: #eff6ff;
+        color: #1a6fd4;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 4px 10px;
+      }
+      .temp-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+      .temp-hot {
+        color: #ef4444;
+      }
+      .temp-warm {
+        color: #f97316;
+      }
+      .temp-mild {
+        color: #10b981;
+      }
+      .temp-cool {
+        color: #3b82f6;
+      }
+      .temp-cold {
+        color: #6366f1;
+      }
+      .humidity-bar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+      }
+      .humidity-bar {
+        width: 60px;
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .humidity-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #3b9ae1, #1a6fd4);
+      }
+      .humidity-label {
+        font-weight: 600;
+        color: #1a6fd4;
+        min-width: 38px;
+        font-size: 0.9rem;
+      }
+      .pagination .page-link {
+        border-radius: 8px !important;
+        margin: 0 2px;
+        border: 1.5px solid #d1d5db;
+        color: #374151;
+        font-weight: 500;
+        font-size: 0.88rem;
+      }
+      .pagination .page-link:hover {
+        background: #eff6ff;
+        border-color: #3b9ae1;
+        color: #1a6fd4;
+      }
+      .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #1a6fd4, #3b9ae1);
+        border-color: transparent;
+        color: #fff;
+      }
+      .pagination .page-item.disabled .page-link {
+        opacity: 0.4;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 64px 32px;
+        color: #9ca3af;
+      }
+      .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 16px;
+        display: block;
+      }
+      .loading-state {
+        text-align: center;
+        padding: 64px 32px;
+      }
+      .spinner-border {
+        color: #1a6fd4;
+      }
+      .info-row {
+        background: #f8fafc;
+        border-top: 1px solid #e5e7eb;
+        padding: 10px 20px;
+        font-size: 0.8rem;
+        color: #6b7280;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .nx-ny-badge {
+        background: #eff6ff;
+        color: #1a6fd4;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 2px 8px;
+      }
+      @media (max-width: 576px) {
+        .control-card {
+          padding: 16px;
+        }
+        .table thead th,
+        .table tbody td {
+          padding: 10px 8px;
+          font-size: 0.82rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <div class="hero-header">
+      <div class="container">
+        <div class="d-flex align-items-center gap-3">
+          <i class="bi bi-cloud-sun-fill" style="font-size: 1.8rem; color: #fbbf24"></i>
+          <div>
+            <h1>기상청 단기예보 조회</h1>
+            <p>지역과 날짜를 선택하면 시간별 온도·습도를 확인할 수 있어요</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container py-4">
+      <!-- Control Panel -->
+      <div class="control-card mb-4">
+        <div class="row g-3 align-items-end">
+          <div class="col-6 col-md-3">
+            <label class="form-label"><i class="bi bi-geo-alt me-1"></i>시/도</label>
+            <select class="form-select" id="sel-sido" onchange="onSidoChange()">
+              <option value="">선택하세요</option>
+            </select>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label"><i class="bi bi-geo me-1"></i>구/군</label>
+            <select class="form-select" id="sel-gugun" onchange="onGugunChange()">
+              <option value="">시/도 먼저 선택</option>
+            </select>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label"><i class="bi bi-calendar3 me-1"></i>날짜</label>
+            <input type="date" class="form-control" id="inp-date" />
+          </div>
+
+          <div class="col-6 col-md-3">
+            <label class="form-label"><i class="bi bi-clock me-1"></i>발표 시각</label>
+            <select class="form-select" id="sel-time">
+              <option value="0200">02:00</option>
+              <option value="0500" selected>05:00</option>
+              <option value="0800">08:00</option>
+              <option value="1100">11:00</option>
+              <option value="1400">14:00</option>
+              <option value="1700">17:00</option>
+              <option value="2000">20:00</option>
+              <option value="2300">23:00</option>
+            </select>
+          </div>
+
+          <div class="col-12 d-flex justify-content-end">
+            <button class="btn btn-search" onclick="fetchForecast()">
+              <i class="bi bi-search me-2"></i>예보 조회
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div id="result-area">
+        <div class="result-card">
+          <div class="empty-state">
+            <i class="bi bi-cloud-drizzle text-secondary"></i>
+            <p class="mb-0 fw-600">지역과 날짜를 선택하고 조회 버튼을 눌러주세요</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // ── Region Data (from xlsx) ──────────────────────────────────────────────────
+      const REGION_DATA = {
+        서울특별시: {
+          "(서울특별시 전체)": { nx: 60, ny: 127 },
+          종로구: { nx: 60, ny: 127 },
+          중구: { nx: 60, ny: 127 },
+          용산구: { nx: 60, ny: 126 },
+          성동구: { nx: 61, ny: 127 },
+          광진구: { nx: 62, ny: 126 },
+          동대문구: { nx: 61, ny: 127 },
+          중랑구: { nx: 62, ny: 128 },
+          성북구: { nx: 61, ny: 127 },
+          강북구: { nx: 61, ny: 128 },
+          도봉구: { nx: 61, ny: 129 },
+          노원구: { nx: 61, ny: 129 },
+          은평구: { nx: 59, ny: 127 },
+          서대문구: { nx: 59, ny: 127 },
+          마포구: { nx: 59, ny: 127 },
+          양천구: { nx: 58, ny: 126 },
+          강서구: { nx: 58, ny: 126 },
+          구로구: { nx: 58, ny: 125 },
+          금천구: { nx: 59, ny: 124 },
+          영등포구: { nx: 58, ny: 126 },
+          동작구: { nx: 59, ny: 125 },
+          관악구: { nx: 59, ny: 125 },
+          서초구: { nx: 61, ny: 125 },
+          강남구: { nx: 61, ny: 126 },
+          송파구: { nx: 62, ny: 126 },
+          강동구: { nx: 62, ny: 126 },
+        },
+        부산광역시: {
+          "(부산광역시 전체)": { nx: 98, ny: 76 },
+          중구: { nx: 97, ny: 74 },
+          서구: { nx: 97, ny: 74 },
+          동구: { nx: 98, ny: 75 },
+          영도구: { nx: 98, ny: 74 },
+          부산진구: { nx: 97, ny: 75 },
+          동래구: { nx: 98, ny: 76 },
+          남구: { nx: 98, ny: 75 },
+          북구: { nx: 96, ny: 76 },
+          해운대구: { nx: 99, ny: 75 },
+          사하구: { nx: 96, ny: 74 },
+          금정구: { nx: 98, ny: 77 },
+          강서구: { nx: 96, ny: 76 },
+          연제구: { nx: 98, ny: 76 },
+          수영구: { nx: 99, ny: 75 },
+          사상구: { nx: 96, ny: 75 },
+          기장군: { nx: 100, ny: 77 },
+        },
+        대구광역시: {
+          "(대구광역시 전체)": { nx: 89, ny: 90 },
+          중구: { nx: 89, ny: 90 },
+          동구: { nx: 90, ny: 91 },
+          서구: { nx: 88, ny: 90 },
+          남구: { nx: 89, ny: 90 },
+          북구: { nx: 89, ny: 91 },
+          수성구: { nx: 89, ny: 90 },
+          달서구: { nx: 88, ny: 90 },
+          달성군: { nx: 86, ny: 88 },
+          군위군: { nx: 88, ny: 99 },
+        },
+        인천광역시: {
+          "(인천광역시 전체)": { nx: 55, ny: 124 },
+          중구: { nx: 54, ny: 125 },
+          동구: { nx: 54, ny: 125 },
+          미추홀구: { nx: 54, ny: 124 },
+          연수구: { nx: 55, ny: 123 },
+          남동구: { nx: 56, ny: 124 },
+          부평구: { nx: 55, ny: 125 },
+          계양구: { nx: 56, ny: 126 },
+          서구: { nx: 55, ny: 126 },
+          강화군: { nx: 51, ny: 130 },
+          옹진군: { nx: 54, ny: 124 },
+        },
+        광주광역시: {
+          "(광주광역시 전체)": { nx: 58, ny: 74 },
+          동구: { nx: 60, ny: 74 },
+          서구: { nx: 59, ny: 74 },
+          남구: { nx: 59, ny: 73 },
+          북구: { nx: 59, ny: 75 },
+          광산구: { nx: 57, ny: 74 },
+        },
+        대전광역시: {
+          "(대전광역시 전체)": { nx: 67, ny: 100 },
+          동구: { nx: 68, ny: 100 },
+          중구: { nx: 68, ny: 100 },
+          서구: { nx: 67, ny: 100 },
+          유성구: { nx: 67, ny: 101 },
+          대덕구: { nx: 68, ny: 100 },
+        },
+        울산광역시: {
+          "(울산광역시 전체)": { nx: 102, ny: 84 },
+          중구: { nx: 102, ny: 84 },
+          남구: { nx: 102, ny: 84 },
+          동구: { nx: 104, ny: 83 },
+          북구: { nx: 103, ny: 85 },
+          울주군: { nx: 101, ny: 84 },
+        },
+        세종특별자치시: {
+          "(세종특별자치시 전체)": { nx: 66, ny: 103 },
+          세종특별자치시: { nx: 66, ny: 103 },
+        },
+        경기도: {
+          "(경기도 전체)": { nx: 60, ny: 120 },
+          수원시장안구: { nx: 60, ny: 121 },
+          수원시권선구: { nx: 60, ny: 120 },
+          수원시팔달구: { nx: 61, ny: 121 },
+          수원시영통구: { nx: 61, ny: 120 },
+          성남시수정구: { nx: 63, ny: 124 },
+          성남시중원구: { nx: 63, ny: 124 },
+          성남시분당구: { nx: 62, ny: 123 },
+          의정부시: { nx: 61, ny: 130 },
+          안양시만안구: { nx: 59, ny: 123 },
+          안양시동안구: { nx: 59, ny: 123 },
+          부천시원미구: { nx: 57, ny: 125 },
+          부천시소사구: { nx: 57, ny: 125 },
+          부천시오정구: { nx: 57, ny: 126 },
+          광명시: { nx: 58, ny: 125 },
+          평택시: { nx: 62, ny: 114 },
+          동두천시: { nx: 61, ny: 134 },
+          안산시상록구: { nx: 58, ny: 121 },
+          안산시단원구: { nx: 57, ny: 121 },
+          고양시덕양구: { nx: 57, ny: 128 },
+          고양시일산동구: { nx: 56, ny: 129 },
+          고양시일산서구: { nx: 56, ny: 129 },
+          과천시: { nx: 60, ny: 124 },
+          구리시: { nx: 62, ny: 127 },
+          남양주시: { nx: 64, ny: 128 },
+          오산시: { nx: 62, ny: 118 },
+          시흥시: { nx: 57, ny: 123 },
+          군포시: { nx: 59, ny: 122 },
+          의왕시: { nx: 60, ny: 122 },
+          하남시: { nx: 64, ny: 126 },
+          용인시처인구: { nx: 64, ny: 119 },
+          용인시기흥구: { nx: 62, ny: 120 },
+          용인시수지구: { nx: 62, ny: 121 },
+          파주시: { nx: 56, ny: 131 },
+          이천시: { nx: 68, ny: 121 },
+          안성시: { nx: 65, ny: 115 },
+          김포시: { nx: 55, ny: 128 },
+          화성시: { nx: 57, ny: 119 },
+          광주시: { nx: 65, ny: 123 },
+          양주시: { nx: 61, ny: 131 },
+          포천시: { nx: 64, ny: 134 },
+          여주시: { nx: 71, ny: 121 },
+          연천군: { nx: 61, ny: 138 },
+          가평군: { nx: 69, ny: 133 },
+          양평군: { nx: 69, ny: 125 },
+        },
+        충청북도: {
+          "(충청북도 전체)": { nx: 69, ny: 107 },
+          청주시상당구: { nx: 69, ny: 106 },
+          청주시서원구: { nx: 69, ny: 107 },
+          청주시흥덕구: { nx: 67, ny: 106 },
+          청주시청원구: { nx: 69, ny: 107 },
+          충주시: { nx: 76, ny: 114 },
+          제천시: { nx: 81, ny: 118 },
+          보은군: { nx: 73, ny: 103 },
+          옥천군: { nx: 71, ny: 99 },
+          영동군: { nx: 74, ny: 97 },
+          증평군: { nx: 71, ny: 110 },
+          진천군: { nx: 68, ny: 111 },
+          괴산군: { nx: 74, ny: 111 },
+          음성군: { nx: 72, ny: 113 },
+          단양군: { nx: 84, ny: 115 },
+        },
+        충청남도: {
+          "(충청남도 전체)": { nx: 55, ny: 107 },
+          천안시동남구: { nx: 63, ny: 110 },
+          천안시서북구: { nx: 63, ny: 112 },
+          공주시: { nx: 63, ny: 102 },
+          보령시: { nx: 54, ny: 100 },
+          아산시: { nx: 60, ny: 110 },
+          서산시: { nx: 51, ny: 110 },
+          논산시: { nx: 62, ny: 97 },
+          계룡시: { nx: 65, ny: 99 },
+          당진시: { nx: 54, ny: 112 },
+          금산군: { nx: 69, ny: 95 },
+          부여군: { nx: 59, ny: 99 },
+          서천군: { nx: 55, ny: 94 },
+          청양군: { nx: 57, ny: 103 },
+          홍성군: { nx: 55, ny: 106 },
+          예산군: { nx: 58, ny: 107 },
+          태안군: { nx: 48, ny: 109 },
+        },
+        전라남도: {
+          "(전라남도 전체)": { nx: 51, ny: 67 },
+          목포시: { nx: 50, ny: 67 },
+          여수시: { nx: 73, ny: 66 },
+          순천시: { nx: 70, ny: 70 },
+          나주시: { nx: 56, ny: 71 },
+          광양시: { nx: 73, ny: 70 },
+          담양군: { nx: 61, ny: 78 },
+          곡성군: { nx: 66, ny: 77 },
+          구례군: { nx: 69, ny: 75 },
+          고흥군: { nx: 66, ny: 62 },
+          보성군: { nx: 62, ny: 66 },
+          화순군: { nx: 61, ny: 72 },
+          장흥군: { nx: 59, ny: 64 },
+          강진군: { nx: 57, ny: 63 },
+          해남군: { nx: 54, ny: 61 },
+          영암군: { nx: 56, ny: 66 },
+          무안군: { nx: 52, ny: 71 },
+          함평군: { nx: 52, ny: 72 },
+          영광군: { nx: 52, ny: 77 },
+          장성군: { nx: 57, ny: 77 },
+          완도군: { nx: 57, ny: 56 },
+          진도군: { nx: 48, ny: 59 },
+          신안군: { nx: 50, ny: 66 },
+        },
+        경상북도: {
+          "(경상북도 전체)": { nx: 87, ny: 106 },
+          포항시남구: { nx: 102, ny: 94 },
+          포항시북구: { nx: 102, ny: 95 },
+          경주시: { nx: 100, ny: 91 },
+          김천시: { nx: 80, ny: 96 },
+          안동시: { nx: 91, ny: 106 },
+          구미시: { nx: 84, ny: 96 },
+          영주시: { nx: 89, ny: 111 },
+          영천시: { nx: 95, ny: 93 },
+          상주시: { nx: 81, ny: 102 },
+          문경시: { nx: 81, ny: 106 },
+          경산시: { nx: 91, ny: 90 },
+          의성군: { nx: 90, ny: 101 },
+          청송군: { nx: 96, ny: 103 },
+          영양군: { nx: 97, ny: 108 },
+          영덕군: { nx: 102, ny: 103 },
+          청도군: { nx: 91, ny: 86 },
+          고령군: { nx: 83, ny: 87 },
+          성주군: { nx: 83, ny: 91 },
+          칠곡군: { nx: 85, ny: 93 },
+          예천군: { nx: 86, ny: 107 },
+          봉화군: { nx: 90, ny: 113 },
+          울진군: { nx: 102, ny: 115 },
+          울릉군: { nx: 127, ny: 127 },
+        },
+        경상남도: {
+          "(경상남도 전체)": { nx: 91, ny: 77 },
+          창원시의창구: { nx: 90, ny: 77 },
+          창원시성산구: { nx: 91, ny: 76 },
+          창원시마산합포구: { nx: 89, ny: 76 },
+          창원시마산회원구: { nx: 89, ny: 76 },
+          창원시진해구: { nx: 91, ny: 75 },
+          진주시: { nx: 81, ny: 75 },
+          통영시: { nx: 87, ny: 68 },
+          사천시: { nx: 80, ny: 71 },
+          김해시: { nx: 95, ny: 77 },
+          밀양시: { nx: 92, ny: 83 },
+          거제시: { nx: 90, ny: 69 },
+          양산시: { nx: 97, ny: 79 },
+          의령군: { nx: 83, ny: 78 },
+          함안군: { nx: 86, ny: 77 },
+          창녕군: { nx: 87, ny: 83 },
+          고성군: { nx: 85, ny: 71 },
+          남해군: { nx: 77, ny: 68 },
+          하동군: { nx: 74, ny: 73 },
+          산청군: { nx: 76, ny: 80 },
+          함양군: { nx: 74, ny: 82 },
+          거창군: { nx: 77, ny: 86 },
+          합천군: { nx: 81, ny: 84 },
+        },
+        제주특별자치도: {
+          "(제주특별자치도 전체)": { nx: 52, ny: 38 },
+          제주시: { nx: 53, ny: 38 },
+          서귀포시: { nx: 53, ny: 33 },
+        },
+        강원특별자치도: {
+          "(강원특별자치도 전체)": { nx: 73, ny: 134 },
+          춘천시: { nx: 73, ny: 134 },
+          원주시: { nx: 76, ny: 122 },
+          강릉시: { nx: 92, ny: 131 },
+          동해시: { nx: 97, ny: 127 },
+          태백시: { nx: 95, ny: 119 },
+          속초시: { nx: 87, ny: 141 },
+          삼척시: { nx: 98, ny: 125 },
+          홍천군: { nx: 75, ny: 130 },
+          횡성군: { nx: 77, ny: 125 },
+          영월군: { nx: 86, ny: 119 },
+          평창군: { nx: 84, ny: 123 },
+          정선군: { nx: 89, ny: 123 },
+          철원군: { nx: 65, ny: 139 },
+          화천군: { nx: 72, ny: 139 },
+          양구군: { nx: 77, ny: 139 },
+          인제군: { nx: 80, ny: 138 },
+          고성군: { nx: 85, ny: 145 },
+          양양군: { nx: 88, ny: 138 },
+        },
+        전북특별자치도: {
+          "(전북특별자치도 전체)": { nx: 63, ny: 89 },
+          전주시완산구: { nx: 63, ny: 89 },
+          전주시덕진구: { nx: 63, ny: 89 },
+          군산시: { nx: 56, ny: 92 },
+          익산시: { nx: 60, ny: 91 },
+          정읍시: { nx: 58, ny: 83 },
+          남원시: { nx: 68, ny: 80 },
+          김제시: { nx: 59, ny: 88 },
+          완주군: { nx: 63, ny: 89 },
+          진안군: { nx: 68, ny: 88 },
+          무주군: { nx: 72, ny: 93 },
+          장수군: { nx: 70, ny: 85 },
+          임실군: { nx: 66, ny: 84 },
+          순창군: { nx: 63, ny: 79 },
+          고창군: { nx: 56, ny: 80 },
+          부안군: { nx: 56, ny: 87 },
+        },
+        이어도: { "(이어도 전체)": { nx: 28, ny: 8 } },
+      };
+
+      const SERVICE_KEY =
+        "jNu%2FUDr0Q2KYQ9rDGnLJqo4ahkjIQrHpn9wOnGbNXkmLqSFCj5rE6fYoLKFF1ELf5Yr4JDkQeCisuwGmsVfbOw%3D%3D";
+      const PAGE_SIZE = 10;
+
+      let allRows = [];
+      let currentPage = 1;
+      let currentNx = null,
+        currentNy = null,
+        currentRegionLabel = "";
+
+      // ── Init ─────────────────────────────────────────────────────────────────────
+      window.onload = () => {
+        // populate sido
+        const sidoSel = document.getElementById("sel-sido");
+        Object.keys(REGION_DATA)
+          .sort()
+          .forEach(sido => {
+            const opt = document.createElement("option");
+            opt.value = sido;
+            opt.textContent = sido;
+            sidoSel.appendChild(opt);
+          });
+
+        // default date = today
+        const today = new Date();
+        document.getElementById("inp-date").value = today.toISOString().split("T")[0];
+        document.getElementById("inp-date").max = today.toISOString().split("T")[0];
+
+        // Go back 3 days min
+        const minDate = new Date(today);
+        minDate.setDate(minDate.getDate() - 2);
+        document.getElementById("inp-date").min = minDate.toISOString().split("T")[0];
+      };
+
+      function onSidoChange() {
+        const sido = document.getElementById("sel-sido").value;
+        const gugunSel = document.getElementById("sel-gugun");
+        gugunSel.innerHTML = '<option value="">구/군 선택</option>';
+        currentNx = null;
+        currentNy = null;
+        if (!sido) return;
+        Object.keys(REGION_DATA[sido]).forEach(gugun => {
+          const opt = document.createElement("option");
+          opt.value = gugun;
+          opt.textContent = gugun;
+          gugunSel.appendChild(opt);
+        });
+      }
+
+      function onGugunChange() {
+        const sido = document.getElementById("sel-sido").value;
+        const gugun = document.getElementById("sel-gugun").value;
+        if (!sido || !gugun) {
+          currentNx = null;
+          currentNy = null;
+          return;
+        }
+        const coords = REGION_DATA[sido][gugun];
+        currentNx = coords.nx;
+        currentNy = coords.ny;
+        currentRegionLabel = `${sido} ${gugun}`;
+      }
+
+      // ── Fetch ─────────────────────────────────────────────────────────────────────
+      async function fetchForecast() {
+        if (!currentNx || !currentNy) {
+          alert("지역을 선택해주세요.");
+          return;
+        }
+        const dateRaw = document.getElementById("inp-date").value;
+        if (!dateRaw) {
+          alert("날짜를 선택해주세요.");
+          return;
+        }
+        const baseDate = dateRaw.replace(/-/g, "");
+        const baseTime = document.getElementById("sel-time").value;
+
+        showLoading();
+
+        const url =
+          `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst` +
+          `?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=1000&dataType=JSON` +
+          `&base_date=${baseDate}&base_time=${baseTime}&nx=${currentNx}&ny=${currentNy}`;
+
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          const items = data?.response?.body?.items?.item;
+          if (!items || items.length === 0) {
+            showError("조회된 예보 데이터가 없습니다. 날짜나 발표 시각을 변경해보세요.");
+            return;
+          }
+          processItems(items, baseDate, baseTime);
+        } catch (e) {
+          showError("API 호출 중 오류가 발생했습니다: " + e.message);
+        }
+      }
+
+      function processItems(items, baseDate, baseTime) {
+        // Build map: { fcstDate+fcstTime => { TMP, REH } }
+        const map = {};
+        items.forEach(item => {
+          const key = item.fcstDate + item.fcstTime;
+          if (!map[key]) map[key] = { fcstDate: item.fcstDate, fcstTime: item.fcstTime };
+          if (item.category === "TMP") map[key].TMP = item.fcstValue;
+          if (item.category === "REH") map[key].REH = item.fcstValue;
+        });
+
+        // Filter rows that have both TMP and REH
+        allRows = Object.values(map)
+          .filter(r => r.TMP !== undefined && r.REH !== undefined)
+          .sort((a, b) => (a.fcstDate + a.fcstTime).localeCompare(b.fcstDate + b.fcstTime));
+
+        currentPage = 1;
+        renderTable(baseDate, baseTime);
+      }
+
+      // ── Render ────────────────────────────────────────────────────────────────────
+      function renderTable(baseDate, baseTime) {
+        const totalPages = Math.ceil(allRows.length / PAGE_SIZE);
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const pageRows = allRows.slice(start, start + PAGE_SIZE);
+
+        const displayDate = `${baseDate.slice(0, 4)}.${baseDate.slice(4, 6)}.${baseDate.slice(6, 8)}`;
+        const displayTime = `${baseTime.slice(0, 2)}:${baseTime.slice(2, 4)}`;
+
+        let tableHtml = `
+    <div class="result-title">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <i class="bi bi-table me-2"></i>${currentRegionLabel} 시간별 예보
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <span class="badge bg-white text-primary fs-7 fw-600"><i class="bi bi-calendar3 me-1"></i>${displayDate} ${displayTime} 발표</span>
+          <span class="nx-ny-badge">nx=${currentNx} ny=${currentNy}</span>
+          <span class="badge bg-white text-secondary fs-7">총 ${allRows.length}건</span>
+        </div>
+      </div>
+    </div>
+    <div class="table-container">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th style="width:70px">No.</th>
+              <th>날짜</th>
+              <th>시각</th>
+              <th>기온 (℃)</th>
+              <th>습도 (%)</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+        pageRows.forEach((row, i) => {
+          const rowNo = start + i + 1;
+          const d = row.fcstDate;
+          const dateStr = `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6, 8)}`;
+          const t = row.fcstTime;
+          const timeStr = `${t.slice(0, 2)}:${t.slice(2, 4)}`;
+          const tmp = parseFloat(row.TMP);
+          const reh = parseInt(row.REH);
+
+          const tempClass =
+            tmp >= 30
+              ? "temp-hot"
+              : tmp >= 23
+                ? "temp-warm"
+                : tmp >= 15
+                  ? "temp-mild"
+                  : tmp >= 5
+                    ? "temp-cool"
+                    : "temp-cold";
+          const tempIcon =
+            tmp >= 30 ? "🌡️" : tmp >= 23 ? "☀️" : tmp >= 15 ? "🌤️" : tmp >= 5 ? "🌥️" : "❄️";
+
+          tableHtml += `
+      <tr>
+        <td class="text-muted" style="font-size:0.8rem">${rowNo}</td>
+        <td>${dateStr}</td>
+        <td><span class="badge-time">${timeStr}</span></td>
+        <td>
+          <span class="temp-value ${tempClass}">${tempIcon} ${tmp > 0 ? "+" : ""}${tmp}°</span>
+        </td>
+        <td>
+          <div class="humidity-bar-wrap">
+            <div class="humidity-bar"><div class="humidity-fill" style="width:${reh}%"></div></div>
+            <span class="humidity-label">${reh}%</span>
+          </div>
+        </td>
+      </tr>`;
+        });
+
+        tableHtml += `</tbody></table></div>`;
+
+        // Pagination
+        if (totalPages > 1) {
+          tableHtml += `<div class="d-flex justify-content-center align-items-center py-3">
+      <nav><ul class="pagination mb-0">`;
+
+          tableHtml += `<li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+      <a class="page-link" href="#" onclick="goPage(${currentPage - 1});return false;">
+        <i class="bi bi-chevron-left"></i>
+      </a></li>`;
+
+          const range = getPageRange(currentPage, totalPages);
+          range.forEach(p => {
+            if (p === "...") {
+              tableHtml += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+            } else {
+              tableHtml += `<li class="page-item ${p === currentPage ? "active" : ""}">
+          <a class="page-link" href="#" onclick="goPage(${p});return false;">${p}</a></li>`;
+            }
+          });
+
+          tableHtml += `<li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+      <a class="page-link" href="#" onclick="goPage(${currentPage + 1});return false;">
+        <i class="bi bi-chevron-right"></i>
+      </a></li>`;
+
+          tableHtml += `</ul></nav></div>`;
+        }
+
+        // Info row
+        tableHtml += `<div class="info-row">
+    <span>페이지 ${currentPage} / ${totalPages} &nbsp;|&nbsp; ${start + 1}~${Math.min(start + PAGE_SIZE, allRows.length)}번째 항목</span>
+    <span>데이터 출처: 기상청 단기예보 API</span>
+  </div>`;
+        tableHtml += `</div>`;
+
+        document.getElementById("result-area").innerHTML =
+          `<div class="result-card">${tableHtml}</div>`;
+      }
+
+      function goPage(p) {
+        const totalPages = Math.ceil(allRows.length / PAGE_SIZE);
+        if (p < 1 || p > totalPages) return;
+        currentPage = p;
+        renderTable(
+          document.getElementById("inp-date").value.replace(/-/g, ""),
+          document.getElementById("sel-time").value,
+        );
+        document
+          .getElementById("result-area")
+          .scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function getPageRange(cur, total) {
+        if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+        const pages = [];
+        if (cur <= 4) {
+          for (let i = 1; i <= 5; i++) pages.push(i);
+          pages.push("...");
+          pages.push(total);
+        } else if (cur >= total - 3) {
+          pages.push(1);
+          pages.push("...");
+          for (let i = total - 4; i <= total; i++) pages.push(i);
+        } else {
+          pages.push(1);
+          pages.push("...");
+          for (let i = cur - 1; i <= cur + 1; i++) pages.push(i);
+          pages.push("...");
+          pages.push(total);
+        }
+        return pages;
+      }
+
+      // ── UI States ─────────────────────────────────────────────────────────────────
+      function showLoading() {
+        document.getElementById("result-area").innerHTML = `
+    <div class="result-card">
+      <div class="loading-state">
+        <div class="spinner-border mb-3" role="status"></div>
+        <p class="text-muted mb-0">예보 데이터를 불러오는 중...</p>
+      </div>
+    </div>`;
+      }
+
+      function showError(msg) {
+        document.getElementById("result-area").innerHTML = `
+    <div class="result-card">
+      <div class="empty-state">
+        <i class="bi bi-exclamation-triangle text-warning"></i>
+        <p class="mb-0 text-danger">${msg}</p>
+      </div>
+    </div>`;
+      }
+    </script>
+  </body>
+</html>
