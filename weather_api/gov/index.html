@@ -11,10 +11,19 @@
       integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
       crossorigin="anonymous"
     />
+    <link rel="stylesheet" href="css/datepicker.material.css" />
+    <script src="datepicker.js"></script>
   </head>
   <body>
     <div class="container">
       <h1>단기 예보</h1>
+
+      <!-- 데이트피커 -->
+      <form action="" id="dateForm">
+        <input type="text" id="datepicker" />
+        <button>조회</button>
+      </form>
+
       <!-- 테이블 : 일시 온도 습도 -->
       <table class="table table-hover">
         <thead>
@@ -36,37 +45,78 @@
     </div>
 
     <script>
+      const dateForm = document.querySelector("#dateForm");
+      const datePicker = document.querySelector("#datepicker");
+      const searchButton = document.querySelector("button");
       const target = document.querySelector("#target");
 
-      fetch(
-        `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=42242394075bd3398501c3a4d11b43f26301c88934e52a30c3ff92b60f056dd7&pageNo=1&numOfRows=1000&dataType=JSON&base_date=20260522&base_time=0500&nx=55&ny=127`,
-      )
-        .then(res => {
-          console.log(res);
-          return res.json(); // json -> js파일로 변환 후 다음 then으로 결과 전달
-        })
-        .then(result => {
-          let data = result.response.body.items.item;
-          console.log(data);
+      // 데이트피커 생성
+      let datepicker = new Datepicker("#datepicker", {
+        // 1 days in the past
+        min: (() => {
+          let date = new Date();
+          date.setDate(date.getDate() - 2);
+          return date;
+        })(),
 
-          // 카테고리가 TMP인 항목만 골라서 새 배열로 생성
-          let tmpArr = data.filter(d => d.category === "TMP");
-          let rehArr = data.filter(d => d.category === "REH");
+        // today
+        max: (() => {
+          let date = new Date();
+          date.setDate(date.getDate());
+          return date;
+        })(),
+      });
 
-          console.log(tmpArr);
-          console.log(rehArr);
+      searchButton.addEventListener("click", () => {
+        dateForm.requestSubmit();
+      });
 
-          let tableData = "";
-          tmpArr.forEach((data, idx) => {
-            tableData += `<tr>
-              <th scope="row">${data.baseDate}</th>
-              <td>${data.fcstTime}</td>
-              <td>${data.fcstValue}</td>
-              <td>${rehArr[idx].fcstValue}</td>
-            </tr>`;
+      // 데이트 포맷
+      dateForm.addEventListener("submit", e => {
+        e.preventDefault();
+        console.log(datePicker.value); //2026. 5. 22. -->20260522
+        let formatDate = datePicker.value
+          .replace(/\./g, "") // .만 제거
+          .trim() // 공백을 이용해서 배열로 변환
+          .split(/\s+/) //공백기준 배열 변환
+          .map((v, i) => (i === 0 ? v : String(v).padStart(2, "0"))) //[2026,05,22]의 배열을 생성
+          .join(""); // 공백 없이 함침 -> 20260522
+
+        console.log(formatDate); // 20260522
+        inqueryShortTermWeather(formatDate);
+      });
+
+      function inqueryShortTermWeather(date) {
+        fetch(
+          `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=42242394075bd3398501c3a4d11b43f26301c88934e52a30c3ff92b60f056dd7&pageNo=1&numOfRows=1000&dataType=JSON&base_date=${date}&base_time=0500&nx=55&ny=127`,
+        )
+          .then(res => {
+            console.log(res);
+            return res.json(); // json -> js파일로 변환 후 다음 then으로 결과 전달
+          })
+          .then(result => {
+            let data = result.response.body.items.item;
+            console.log(data);
+
+            // 카테고리가 TMP인 항목만 골라서 새 배열로 생성
+            let tmpArr = data.filter(d => d.category === "TMP");
+            let rehArr = data.filter(d => d.category === "REH");
+
+            console.log(tmpArr);
+            console.log(rehArr);
+
+            let tableData = "";
+            tmpArr.forEach((data, idx) => {
+              tableData += `<tr>
+                <th scope="row">${data.baseDate}</th>
+                <td>${data.fcstTime}</td>
+                <td>${data.fcstValue}</td>
+                <td>${rehArr[idx].fcstValue}</td>
+              </tr>`;
+            });
+            target.innerHTML = tableData;
           });
-          target.innerHTML = tableData;
-        });
+      }
     </script>
   </body>
 </html>
