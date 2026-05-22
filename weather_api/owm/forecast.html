@@ -53,11 +53,11 @@
         `https://api.openweathermap.org/data/2.5/forecast?appid=168b6754dcf47f6e62a9e2e3a63f2065&id=${1835848}&units=metric`,
       )
         .then(res => {
-          console.log(res);
+          // console.log(res);
           return res.json(); // json -> js파일로 변환 후 다음 then으로 결과 전달
         })
         .then(result => {
-          console.log(result.list);
+          // console.log(result.list);
 
           let tableData = "";
           result.list.forEach(data => {
