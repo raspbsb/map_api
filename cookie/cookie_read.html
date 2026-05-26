@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>쿠키 확인하기</title>
+  </head>
+  <body>
+    <h1>쿠키 확인하기</h1>
+    <pre>
+      쿠키 확인하기 : 
+    </pre>
+    <script>
+      let today = new Date(); // 현재 시간
+      today.setDate(today.getDate() + 1); // 오늘의 날짜를 가져와서 +1한 것으로 today 변수를 설정한다.
+
+      document.cookie = `My1stCookie=안녕1; Expires=${today.toString()}`;
+      document.cookie = `My2ndCookie=안녕2; Expires=${today.toString()}`;
+      document.cookie = `My3rdCookie=안녕3; Expires=${today.toString()}`;
+
+      console.log(document.cookie);
+      // 문자열에서 특정 값의 유무
+      // 대상.includes("값")
+      let result = document.cookie.includes("My1stCookie=안녕1");
+      console.log(result);
+    </script>
+  </body>
+</html>

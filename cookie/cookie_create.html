@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>쿠키 생성</title>
+  </head>
+  <body>
+    <h1>쿠키 생성</h1>
+    <pre>
+      필수 : 쿠키 이름, 값, 만기일
+      document.cookie = ""
+      document.cookie = "쿠키명=값; Expires=만기일"  구분 작성
+      Domain 주소
+      path 경로
+      
+      만기일 : 년월일시분초
+    </pre>
+    <script>
+      // 1분간 유지되는 쿠키 생성
+      let today = new Date(); // 현재 시간
+
+      // 날짜 추출
+      // console.log(today.getDate());
+      console.log(today.getMinutes());
+
+      // 날짜 지정
+      // 대상.setDate(새로운 날짜)
+      // 대상.setMinutes(새로운 분)
+      // console.log(today.setDate(today.getDate() + 7));
+      console.log(today.setMinutes(today.getMinutes() + 1));
+
+      // unix 숫자 -> 문자열 변환
+      // today.toUTCString();
+      // console.log(today.toUTCString());
+      console.log(today.toString());
+
+      document.cookie = `MyFirstCookie=안녕; Expires=${today.toUTCString()}`;
+    </script>
+  </body>
+</html>

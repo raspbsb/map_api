@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cookiePopup</title>
+    <style>
+      .popup {
+        position: fixed;
+        left: 20%;
+        top: 20%;
+        transform: translate(-50%, -50%);
+        padding: 20px 40px 40px;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+        background: #fff;
+        margin: 0;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>cookiePractice</h1>
+
+    <ul>
+      <li><a href="cookie_create.html">createCookie</a></li>
+      <li><a href="cookie_delete.html">deleteCookie</a></li>
+      <li><a href="cookie_read.html">readCookie</a></li>
+    </ul>
+
+    <p>
+      Lorem ipsum, dolor sit amet consectetur adipisicing elit. Recusandae tenetur atque maiores
+      possimus totam velit voluptates harum accusantium, ratione, optio voluptatibus ad libero sed
+      enim pariatur labore modi magnam. Facere.
+    </p>
+    <p>
+      Lorem ipsum dolor sit amet consectetur, adipisicing elit. Sapiente libero sed, facere cum ad
+      optio, rerum et eos placeat voluptatem, eius aliquam odio minus voluptatum vel ea quo?
+      Corrupti, inventore?
+    </p>
+    <dialog id="popup" class="popup">
+      <h2>반갑습니다.</h2>
+      <input type="checkbox" id="agree" />
+      <label for="agree">하루 안보기</label>
+      <button>닫기</button>
+    </dialog>
+    <script>
+      const popup = document.querySelector("#popup");
+      const popupCloseBtn = popup.querySelector("button");
+      const agree = document.querySelector("#agree");
+
+      // 쿠키 확인
+      // popup=안볼래 쿠키가 있다면, 팝업이 안보인다
+      // popup=안볼래 쿠키가 없다면, 팝업이 보인다
+
+      let result = document.cookie.includes("popup=안볼래");
+      if (result === true) {
+        // popup.style.display = "none";
+        popup.close();
+      } else {
+        // popup.style.display = "block";
+        popup.showModal();
+      }
+
+      // 삼항연산자로 줄이기
+      // popup.style.display = document.cookie.includes("popup=안볼래") ? "none" : "block";
+
+      // 닫기 버튼을 클릭하면 popup이 안보인다.
+      // 팝업이 있을 때, 하루 안보기를 체크하고 닫았다면 오늘까지 유지되는 popup=안볼래 쿠키 생성
+      // 팝업이 있을 때, 하루 안보기를 체크하지 않고 닫았다면 popup=안볼래 쿠키 제거
+
+      popupCloseBtn.addEventListener("click", () => {
+        // popup.style.display = "none";
+        popup.close();
+        if (agree.checked) {
+          // 체크 여부 확인
+          createCookie("popup", "안볼래", 1);
+        } else {
+          createCookie("popup", "안볼래", -1);
+        }
+      });
+
+      // 쿠키 생성 함수
+      // 쿠키의 이름, 쿠키의 값, 만기일
+
+      function createCookie(name, value, expire) {
+        let today = new Date();
+        today.setDate(today.getDate() + expire);
+        document.cookie = `${name} = ${value}; Expires=${today.toString()}`;
+      }
+    </script>
+  </body>
+</html>
