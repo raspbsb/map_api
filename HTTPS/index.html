@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>서버에 요청 보내기</title>
+    <script>
+      fetch("https://dummyjson.com/products")
+        .then(res => res.json()) // json -> object
+        .then(result => console.log(result)); // 39개 출력
+      //데이터 추가 post
+      fetch("https://dummyjson.com/posts/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "안녕",
+          body: "첫글이야",
+          userId: 5,
+          /* other post data */
+        }),
+      })
+        .then(res => res.json())
+        .then(result => {
+          console.log(result);
+        });
+    </script>
+  </head>
+  <body>
+    <h1>서버에 요청 보내기</h1>
+  </body>
+</html>
